@@ -1,4 +1,4 @@
-FROM node:20.18.0-bookworm-slim AS base
+FROM node:lts-alpine3.21 AS base
 
 FROM base AS deps
 WORKDIR /app
@@ -8,7 +8,9 @@ RUN npm install
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/package.json ./package.json
+COPY ./src ./src
+COPY ./tsconfig.json ./
 RUN npm run build
 
 # Production image
@@ -17,9 +19,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-COPY --from=builder --chown=node:node /app/dist ./dist
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=root:root --chmod=755 /app/dist ./dist
+COPY --from=builder --chown=root:root --chmod=755 /app/node_modules ./node_modules
 
-EXPOSE 3000
+EXPOSE 8080
 USER node
 CMD [ "node", "dist/index.js"]
